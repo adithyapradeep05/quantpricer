@@ -1,8 +1,8 @@
-# QuantPricer 📈
+# QuantPricer
 
 A personal learning tool for European option pricing using Black-Scholes formulas. This project implements core mathematical functions from scratch using only `math` and `numpy`, with no SciPy dependency.
 
-## 🎯 Purpose
+## Purpose
 
 QuantPricer is designed to help you learn:
 - **Python programming** with clean, readable code
@@ -10,14 +10,14 @@ QuantPricer is designed to help you learn:
 - **Financial engineering** concepts with practical examples
 - **Software engineering** best practices (testing, documentation, modular design)
 
-## 📋 Scope
+## Scope
 
 - **European options only** (no American options)
 - **No dividends** (standard Black-Scholes assumptions)
 - **No early exercise** (European-style)
 - **Core math from scratch** (no SciPy dependency)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -66,7 +66,7 @@ streamlit run app/app.py
 
 The app will open in your browser with a clean interface for option pricing and analysis.
 
-## 🔍 Golden Values Validation
+## Golden Values Validation
 
 **Test Case:** S=100, K=100, r=0.05, σ=0.2, T=1
 
@@ -85,7 +85,7 @@ The app will open in your browser with a clean interface for option pricing and 
 | **Call Rho** | 53.2325 | ✅ |
 | **Put Rho** | -41.8905 | ✅ |
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 quantpricer/
@@ -114,7 +114,7 @@ quantpricer/
 └── pyproject.toml
 ```
 
-## 🧮 Core Features
+## Core Features
 
 ### 1. Normal Distribution Functions (`src/core/normals.py`)
 - `normal_pdf(x)` - Standard normal probability density function φ(x)
@@ -150,7 +150,7 @@ quantpricer/
 - Logs all parameters, prices, and Greeks
 - Query and analyze historical calculations
 
-## 🎨 Streamlit Interface
+## Streamlit Interface
 
 The web interface provides:
 
@@ -161,7 +161,7 @@ The web interface provides:
 - **Golden values validation** for quick verification
 - **Scenario logging** to SQLite database
 
-## 🧪 Testing
+## Testing
 
 Comprehensive test suite with:
 
@@ -179,7 +179,7 @@ pytest tests/test_bs.py      # Specific test file
 pytest -k "golden"           # Tests with "golden" in name
 ```
 
-## 📊 Example Usage
+## Example Usage
 
 ### Python API
 
@@ -216,7 +216,7 @@ streamlit run app/app.py
 # Use the "Plot Price Curve" and "Plot Heatmap" buttons
 ```
 
-## 🔧 Development
+## Development
 
 ### Adding New Features
 
@@ -233,7 +233,7 @@ streamlit run app/app.py
 - **Comprehensive error handling**
 - **Unit tests** for all functionality
 
-## 📚 Mathematical Background
+## Mathematical Background
 
 ### Black-Scholes Formula
 
@@ -261,7 +261,7 @@ d2 = d1 - σ√T
 - **Theta**: ∂C/∂T (time decay)
 - **Rho**: ∂C/∂r (interest rate sensitivity)
 
-## 🤝 Contributing
+## Contributing
 
 This is a personal learning project, but suggestions are welcome:
 
@@ -271,11 +271,11 @@ This is a personal learning project, but suggestions are welcome:
 4. **Ensure** all tests pass
 5. **Submit** a pull request
 
-## 📄 License
+## License
 
 This project is for educational purposes. Feel free to use and modify for your own learning.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Black-Scholes model** by Fischer Black and Myron Scholes
 - **Python community** for excellent libraries
@@ -284,5 +284,5 @@ This project is for educational purposes. Feel free to use and modify for your o
 
 ---
 
-**Happy Learning! 📈✨**
+**Happy Learning!**
 
