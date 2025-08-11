@@ -125,7 +125,7 @@ def theta(S: float, K: float, T: float, r: float, sigma: float, option_type: Opt
     if option_type == "call":
         term2 = -r * K * math.exp(-r * T) * normal_cdf(d2_val)
     else:
-        term2 = -r * K * math.exp(-r * T) * normal_cdf(-d2_val)
+        term2 = r * K * math.exp(-r * T) * normal_cdf(-d2_val)
     
     return term1 + term2
 

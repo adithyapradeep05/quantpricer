@@ -14,6 +14,45 @@ from src.utils.plots import plot_price_curve, plot_price_heatmap, plot_greeks_cu
 from src.utils.logging import log_scenario
 
 
+def check_put_call_parity(call_price, put_price, S, K, r, T):
+    """
+    Check put-call parity: C - P = S - Ke^(-rT)
+    
+    Returns:
+        (is_valid, difference, tolerance_met)
+    """
+    left_side = call_price - put_price
+    right_side = S - K * np.exp(-r * T)
+    difference = abs(left_side - right_side)
+    tolerance = 1e-6
+    tolerance_met = difference < tolerance
+    
+    return tolerance_met, difference, left_side, right_side
+
+
+def format_greek_value(value, greek_name, time_period="per year"):
+    """
+    Format Greek values with appropriate units and time period.
+    """
+    if greek_name == "theta":
+        if time_period == "per day":
+            value = value / 365
+            unit = "/day"
+        elif time_period == "per trading day":
+            value = value / 252
+            unit = "/trading day"
+        else:
+            unit = "/year"
+    elif greek_name == "vega":
+        unit = "/1.0 vol"
+    elif greek_name == "rho":
+        unit = "/1.0 rate"
+    else:
+        unit = ""
+    
+    return f"{value:.6f}{unit}"
+
+
 def calculate_all_results(S, K, r, T, sigma, option_type, market_price):
     results = {}
     
@@ -39,16 +78,16 @@ def calculate_all_results(S, K, r, T, sigma, option_type, market_price):
     
     try:
         S_range = np.linspace(max(1, S * 0.5), S * 1.5, 100)
-        plot_path = plot_price_curve(S_range.tolist(), K, r, sigma, T, option_type)
-        results['price_curve_path'] = plot_path
+        fig = plot_price_curve(S_range.tolist(), K, r, sigma, T, option_type)
+        results['price_curve_fig'] = fig
         results['price_curve_success'] = True
     except Exception as e:
         results['price_curve_error'] = str(e)
         results['price_curve_success'] = False
     
     try:
-        plot_path = plot_greeks_curves(S_range.tolist(), K, r, sigma, T, option_type)
-        results['greeks_curves_path'] = plot_path
+        fig = plot_greeks_curves(S_range.tolist(), K, r, sigma, T, option_type)
+        results['greeks_curves_fig'] = fig
         results['greeks_curves_success'] = True
     except Exception as e:
         results['greeks_curves_error'] = str(e)
@@ -57,8 +96,8 @@ def calculate_all_results(S, K, r, T, sigma, option_type, market_price):
     try:
         S_values = np.linspace(max(1, S * 0.5), S * 1.5, 50)
         vol_values = np.linspace(0.05, 0.5, 50)
-        plot_path = plot_price_heatmap(S_values.tolist(), vol_values.tolist(), K, r, T, option_type)
-        results['heatmap_path'] = plot_path
+        fig = plot_price_heatmap(S_values.tolist(), vol_values.tolist(), K, r, T, option_type)
+        results['heatmap_fig'] = fig
         results['heatmap_success'] = True
     except Exception as e:
         results['heatmap_error'] = str(e)
@@ -106,10 +145,17 @@ def main():
     
     market_price = st.sidebar.number_input("Market Price (for IV)", value=10.0, min_value=0.0, step=0.1, format="%.2f", key="market_price_input")
     
+    st.sidebar.header("Display Options")
+    time_period = st.sidebar.selectbox(
+        "Theta Time Period", 
+        ["per year", "per day", "per trading day"],
+        key="time_period_input"
+    )
+    
     if st.sidebar.button("Calculate Option Price", type="primary", key="calculate_button"):
         st.session_state.calculate_triggered = True
     
-    current_params = (S, K, r, T, sigma, option_type, market_price)
+    current_params = (S, K, r, T, sigma, option_type, market_price, time_period)
     
     if 'previous_params' not in st.session_state:
         st.session_state.previous_params = current_params
@@ -143,11 +189,11 @@ def main():
                 
                 st.subheader("Greeks")
                 greeks_df = pd.DataFrame([
-                    ["Delta", f"{greeks['delta']:.6f}"],
-                    ["Gamma", f"{greeks['gamma']:.6f}"],
-                    ["Vega", f"{greeks['vega']:.4f}"],
-                    ["Theta", f"{greeks['theta']:.4f}"],
-                    ["Rho", f"{greeks['rho']:.4f}"]
+                    ["Delta", format_greek_value(greeks['delta'], "delta")],
+                    ["Gamma", format_greek_value(greeks['gamma'], "gamma")],
+                    ["Vega", format_greek_value(greeks['vega'], "vega")],
+                    ["Theta", format_greek_value(greeks['theta'], "theta", time_period)],
+                    ["Rho", format_greek_value(greeks['rho'], "rho")]
                 ], columns=["Greek", "Value"])
                 
                 st.dataframe(greeks_df, hide_index=True)
@@ -179,6 +225,34 @@ def main():
             else:
                 st.error(f"Error: {results.get('iv_error', 'Unknown error')}")
         
+        st.header("Put-Call Parity Check")
+        
+        if results.get('price_success', False):
+            try:
+                call_price = black_scholes_price(S, K, T, r, sigma, "call")
+                put_price = black_scholes_price(S, K, T, r, sigma, "put")
+                
+                parity_ok, difference, left_side, right_side = check_put_call_parity(
+                    call_price, put_price, S, K, r, T
+                )
+                
+                if parity_ok:
+                    st.success(" Put-Call Parity OK")
+                else:
+                    st.warning(" Put-Call Parity Check Failed")
+                
+                st.markdown(f"""
+                **Parity Check:** C - P = S - Ke^(-rT)
+                
+                - **Left side (C - P):** {left_side:.6f}
+                - **Right side (S - Ke^(-rT)):** {right_side:.6f}
+                - **Difference:** {difference:.8f}
+                - **Tolerance:** 1e-6
+                """)
+                
+            except Exception as e:
+                st.error(f"Parity check error: {e}")
+        
         st.header("Charts & Analysis")
         
         col3, col4 = st.columns(2)
@@ -186,20 +260,20 @@ def main():
         with col3:
             st.subheader("Price Curve")
             if results.get('price_curve_success', False):
-                st.image(results['price_curve_path'], caption="Option Price vs Stock Price")
+                st.pyplot(results['price_curve_fig'])
             else:
                 st.error(f"Plot error: {results.get('price_curve_error', 'Unknown error')}")
             
             st.subheader("Greeks Curves")
             if results.get('greeks_curves_success', False):
-                st.image(results['greeks_curves_path'], caption="Option Greeks vs Stock Price")
+                st.pyplot(results['greeks_curves_fig'])
             else:
                 st.error(f"Plot error: {results.get('greeks_curves_error', 'Unknown error')}")
         
         with col4:
             st.subheader("Price Heatmap")
             if results.get('heatmap_success', False):
-                st.image(results['heatmap_path'], caption="Option Price Heatmap (S vs Vol)")
+                st.pyplot(results['heatmap_fig'])
             else:
                 st.error(f"Plot error: {results.get('heatmap_error', 'Unknown error')}")
         

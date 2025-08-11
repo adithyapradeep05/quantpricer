@@ -2,13 +2,6 @@
 
 A personal learning tool for European option pricing using Black-Scholes formulas. This project implements core mathematical functions from scratch using only `math` and `numpy`, with no SciPy dependency.
 
-## Purpose
-
-QuantPricer is designed to help you learn:
-- **Python programming** with clean, readable code
-- **Options mathematics** through hands-on implementation
-- **Financial engineering** concepts with practical examples
-- **Software engineering** best practices (testing, documentation, modular design)
 
 ## Scope
 
@@ -261,19 +254,6 @@ d2 = d1 - σ√T
 - **Theta**: ∂C/∂T (time decay)
 - **Rho**: ∂C/∂r (interest rate sensitivity)
 
-## Contributing
-
-This is a personal learning project, but suggestions are welcome:
-
-1. **Fork** the repository
-2. **Create** a feature branch
-3. **Add** tests for new functionality
-4. **Ensure** all tests pass
-5. **Submit** a pull request
-
-## License
-
-This project is for educational purposes. Feel free to use and modify for your own learning.
 
 ## Acknowledgments
 
@@ -282,7 +262,4 @@ This project is for educational purposes. Feel free to use and modify for your o
 - **Streamlit** for the web framework
 - **Mathematical finance** community for educational resources
 
----
-
-**Happy Learning!**
 
