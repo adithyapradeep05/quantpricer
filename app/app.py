@@ -124,6 +124,31 @@ def calculate_all_results(S, K, r, T, sigma, option_type, market_price):
     return results
 
 
+def calculate_valid_market_price_bounds(S, K, r, T, option_type):
+    """
+    Calculate valid market price bounds for implied volatility calculation.
+    
+    Returns:
+        (lower_bound, upper_bound, suggested_price)
+    """
+    if option_type == "call":
+        # For calls: max(0, S - Ke^(-rT)) <= price <= S
+        lower_bound = max(0, S - K * np.exp(-r * T))
+        upper_bound = S
+    else:
+        # For puts: max(0, Ke^(-rT) - S) <= price <= K
+        lower_bound = max(0, K * np.exp(-r * T) - S)
+        upper_bound = K
+    
+    # Suggest a reasonable price within bounds
+    if lower_bound == upper_bound:
+        suggested_price = lower_bound
+    else:
+        suggested_price = lower_bound + 0.1 * (upper_bound - lower_bound)
+    
+    return lower_bound, upper_bound, suggested_price
+
+
 def main():
     st.set_page_config(
         page_title="QuantPricer - Option Pricing Tool",
@@ -134,16 +159,55 @@ def main():
     st.title("QuantPricer - Option Pricing Tool")
     st.markdown("A personal learning tool for European option pricing using Black-Scholes formulas.")
     
+    st.sidebar.header("Calculate")
+    
+    if st.sidebar.button("Calculate Option Price", type="primary", key="calculate_button"):
+        st.session_state.calculate_triggered = True
+    
     st.sidebar.header("Option Parameters")
     
     S = st.sidebar.number_input("Stock Price (S)", value=100.0, min_value=0.1, step=1.0, key="S_input")
     K = st.sidebar.number_input("Strike Price (K)", value=100.0, min_value=0.1, step=1.0, key="K_input")
     r = st.sidebar.number_input("Risk-free Rate (r)", value=0.05, min_value=0.0, max_value=1.0, step=0.01, format="%.3f", key="r_input")
     T = st.sidebar.number_input("Time to Expiration (T)", value=1.0, min_value=0.0, step=0.1, format="%.1f", key="T_input")
-    sigma = st.sidebar.number_input("Volatility (σ)", value=0.2, min_value=0.001, max_value=5.0, step=0.01, format="%.3f", key="sigma_input")
+    sigma = st.sidebar.number_input("Volatility (σ)", value=0.2, min_value=0.001, max_value=5.0, step=0.1, format="%.3f", key="sigma_input")
     option_type = st.sidebar.selectbox("Option Type", ["call", "put"], key="option_type_input")
     
-    market_price = st.sidebar.number_input("Market Price (for IV)", value=10.0, min_value=0.0, step=0.1, format="%.2f", key="market_price_input")
+    # Calculate valid market price bounds
+    lower_bound, upper_bound, suggested_price = calculate_valid_market_price_bounds(S, K, r, T, option_type)
+    
+    # Use a more robust session state key that includes parameter hash
+    param_hash = hash((S, K, r, T, option_type))
+    market_price_key = f"market_price_{param_hash}"
+    
+    # Initialize market price in session state if not present or if parameters changed
+    if market_price_key not in st.session_state:
+        st.session_state[market_price_key] = suggested_price
+    
+    # Check if current market price is still valid
+    current_market_price = st.session_state[market_price_key]
+    if current_market_price < lower_bound or current_market_price > upper_bound:
+        st.session_state[market_price_key] = suggested_price
+    
+    # Use a unique key for the number input to ensure proper updates
+    input_key = f"market_price_input_{param_hash}"
+    
+    market_price = st.sidebar.number_input(
+        "Market Price (for IV)", 
+        value=st.session_state[market_price_key],
+        min_value=lower_bound,
+        max_value=upper_bound,
+        step=0.1,
+        format="%.2f",
+        key=input_key,
+        help=f"Valid range: {lower_bound:.2f} to {upper_bound:.2f}"
+    )
+    
+    # Update session state immediately after input
+    st.session_state[market_price_key] = market_price
+    
+    # Show bounds info
+    st.sidebar.info(f"**Valid IV range:** {lower_bound:.2f} - {upper_bound:.2f}")
     
     st.sidebar.header("Display Options")
     time_period = st.sidebar.selectbox(
@@ -152,19 +216,7 @@ def main():
         key="time_period_input"
     )
     
-    if st.sidebar.button("Calculate Option Price", type="primary", key="calculate_button"):
-        st.session_state.calculate_triggered = True
-    
-    current_params = (S, K, r, T, sigma, option_type, market_price, time_period)
-    
-    if 'previous_params' not in st.session_state:
-        st.session_state.previous_params = current_params
-        st.session_state.calculate_triggered = True
-    
-    if current_params != st.session_state.previous_params:
-        st.session_state.calculate_triggered = True
-        st.session_state.previous_params = current_params
-    
+    # Only calculate when button is pressed, not on parameter changes
     if 'calculate_triggered' not in st.session_state:
         st.session_state.calculate_triggered = False
     
@@ -221,7 +273,7 @@ def main():
                     pass
                 
                 st.session_state.implied_vol = implied_vol
-                st.session_state.market_price = market_price
+                st.session_state[market_price_key] = market_price
             else:
                 st.error(f"Error: {results.get('iv_error', 'Unknown error')}")
         
