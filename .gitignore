@@ -1,0 +1,15 @@
+# .gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.env
+.venv/
+venv/
+.envrc
+.DS_Store
+.idea/
+.vscode/
+.quantpricer.db
+reports/*.png
