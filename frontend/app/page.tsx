@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { toast, Toaster } from 'sonner';
 import Controls from './components/Controls';
 import PriceCard from './components/PriceCard';
@@ -10,6 +10,8 @@ import PriceCurve from './components/Charts/PriceCurve';
 import Heatmap from './components/Charts/Heatmap';
 import GreeksPanel from './components/Charts/GreeksPanel';
 import { api, PriceResponse, GreeksResponse, IVResponse } from './api-client';
+import { usePrice } from '@/hooks/usePrice';
+import { WakeBanner } from '@/components/WakeBanner';
 
 interface CalculationErrors {
   price?: string;
@@ -21,6 +23,8 @@ interface CalculationErrors {
 }
 
 export default function Home() {
+  const { price: newPrice, waking, bannerText, lastCached, cancelAll } = usePrice();
+  const abortRef = useRef<AbortController | null>(null);
   const [loading, setLoading] = useState(false);
   const [price, setPrice] = useState<number | null>(null);
   const [greeks, setGreeks] = useState<GreeksResponse | null>(null);
@@ -29,6 +33,9 @@ export default function Home() {
   const [errors, setErrors] = useState<CalculationErrors>({});
 
   const handleCalculate = async (params: any) => {
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+    
     setLoading(true);
     setCurrentParams(params);
     setErrors({});
@@ -41,24 +48,25 @@ export default function Home() {
     const newErrors: CalculationErrors = {};
 
     try {
-      // Calculate option price
+      // Calculate option price using new cold-start handling
       try {
-        const priceResult = await api.postPrice({
+        const priceResult = await newPrice({
           S: params.S,
           K: params.K,
           r: params.r,
-          T: params.T,
+          q: params.q || 0,
           sigma: params.sigma,
-          option_type: params.option_type,
-        });
+          T: params.T,
+          type: params.option_type,
+        }, abortRef.current.signal);
         setPrice(priceResult.price);
       } catch (error: any) {
-        const errorMsg = error.response?.data?.detail || error.message || 'Price calculation failed';
+        const errorMsg = error.message || 'Price calculation failed';
         newErrors.price = typeof errorMsg === 'string' ? errorMsg : 'Price calculation failed';
         console.error('Price calculation error:', error);
       }
 
-      // Calculate Greeks
+      // Calculate Greeks using existing API
       try {
         const greeksResult = await api.postGreeks({
           S: params.S,
@@ -75,7 +83,7 @@ export default function Home() {
         console.error('Greeks calculation error:', error);
       }
 
-      // Calculate implied volatility
+      // Calculate implied volatility using existing API
       try {
         const ivResult = await api.postIV({
           market_price: params.market_price,
@@ -108,7 +116,7 @@ export default function Home() {
 
     } catch (error: any) {
       console.error('General calculation error:', error);
-      const errorMsg = error.response?.data?.detail || error.message || 'Unknown error';
+      const errorMsg = error.message || 'Unknown error';
       toast.error(`Calculation failed: ${typeof errorMsg === 'string' ? errorMsg : 'Unknown error'}`);
     } finally {
       setLoading(false);
@@ -179,6 +187,26 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {waking && lastCached && (
+        <div className="fixed top-4 right-4 p-3 rounded-md border bg-neutral-900 text-white text-sm max-w-md">
+          <div className="text-xs opacity-70 mb-1">Showing last cached result while server wakes…</div>
+          <div className="text-xs">
+            <div>Price: {lastCached.price.toFixed(4)}</div>
+            <div>Delta: {lastCached.greeks.delta.toFixed(4)}</div>
+            <div>Gamma: {lastCached.greeks.gamma.toFixed(4)}</div>
+          </div>
+        </div>
+      )}
+
+      <WakeBanner 
+        show={waking} 
+        text={bannerText} 
+        onCancel={() => {
+          abortRef.current?.abort();
+          cancelAll();
+        }} 
+      />
     </div>
   );
 }

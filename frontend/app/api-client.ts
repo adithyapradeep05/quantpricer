@@ -132,7 +132,7 @@ export const api = {
   },
 
   healthCheck: async (): Promise<{ status: string }> => {
-    const response = await apiClient.get('/healthz');
+    const response = await apiClient.get('/health');
     return response.data;
   },
 };
