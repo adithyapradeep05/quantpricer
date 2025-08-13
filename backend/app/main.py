@@ -12,6 +12,7 @@ from .deps import generate_S_range, generate_vol_range
 from src.core.bs import black_scholes_price
 from src.core.greeks import calculate_all_greeks
 from src.core.iv import implied_vol_from_price
+from .charts_api import router as charts_router
 
 app = FastAPI(
     title="QuantPricer API",
@@ -26,6 +27,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include charts router
+app.include_router(charts_router)
 
 
 @app.get("/healthz", response_model=HealthResponse)

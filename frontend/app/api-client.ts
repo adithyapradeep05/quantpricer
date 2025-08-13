@@ -54,6 +54,15 @@ export interface HeatmapRequest {
   option_type: "call" | "put";
 }
 
+export interface GreeksCurveRequest {
+  S_values: number[];
+  K: number;
+  r: number;
+  sigma: number;
+  T: number;
+  option_type: "call" | "put";
+}
+
 export interface PriceResponse {
   price: number;
 }
@@ -82,6 +91,15 @@ export interface HeatmapResponse {
   vol_values: number[];
 }
 
+export interface GreeksCurveResponse {
+  S_values: number[];
+  delta: number[];
+  gamma: number[];
+  vega: number[];
+  theta: number[];
+  rho: number[];
+}
+
 export const api = {
   postPrice: async (params: PriceRequest): Promise<PriceResponse> => {
     const response = await apiClient.post('/api/price', params);
@@ -108,8 +126,20 @@ export const api = {
     return response.data;
   },
 
+  postGreeksCurves: async (params: GreeksCurveRequest): Promise<GreeksCurveResponse> => {
+    const response = await apiClient.post('/api/greeks-curves', params);
+    return response.data;
+  },
+
   healthCheck: async (): Promise<{ status: string }> => {
     const response = await apiClient.get('/healthz');
     return response.data;
   },
 };
+
+// Helper function to generate linspace arrays
+export function linspace(min: number, max: number, n: number): number[] {
+  if (n <= 1) return [min];
+  const step = (max - min) / (n - 1);
+  return Array.from({ length: n }, (_, i) => +(min + i * step).toFixed(6));
+}

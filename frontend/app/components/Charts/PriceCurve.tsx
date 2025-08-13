@@ -1,20 +1,80 @@
 "use client";
 
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useEffect, useRef } from 'react';
 import { TrendingUp, AlertCircle } from 'lucide-react';
-import { CurveResponse } from '../../api-client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { api, linspace } from '../../api-client';
 
 interface PriceCurveProps {
-  data: CurveResponse | null;
-  loading: boolean;
   optionType: 'call' | 'put';
+  K: number;
+  r: number;
+  sigma: number;
+  T: number;
+  Smin?: number;
+  Smax?: number;
+  points?: number;
   error?: string;
 }
 
-export default function PriceCurve({ data, loading, optionType, error }: PriceCurveProps) {
+export default function PriceCurve({ 
+  optionType, 
+  K, 
+  r, 
+  sigma, 
+  T, 
+  Smin, 
+  Smax, 
+  points = 201,
+  error: propError 
+}: PriceCurveProps) {
+  const [data, setData] = useState<{ S_values: number[], prices: number[] } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(propError || null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const defaultSmin = Smin || 0.5 * K;
+  const defaultSmax = Smax || 1.5 * K;
+
+  useEffect(() => {
+    setError(propError || null);
+  }, [propError]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!K || !r || !sigma || !T) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const S_values = linspace(defaultSmin, defaultSmax, points);
+        
+        const response = await api.postCurve({
+          S_values,
+          K,
+          r,
+          sigma,
+          T,
+          option_type: optionType,
+        });
+
+        setData({
+          S_values: response.S_values,
+          prices: response.prices
+        });
+             } catch (err: any) {
+         console.error('Error fetching price curve data:', err);
+         const errorMessage = err.response?.data?.detail || err.message || 'Failed to fetch price curve data';
+         setError(typeof errorMessage === 'string' ? errorMessage : 'Failed to fetch price curve data');
+       } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [optionType, K, r, sigma, T, defaultSmin, defaultSmax, points]);
 
   useEffect(() => {
     if (!data || !canvasRef.current) return;
@@ -36,14 +96,17 @@ export default function PriceCurve({ data, loading, optionType, error }: PriceCu
 
     if (S_values.length === 0) return;
 
-    // Find min and max values for scaling
-    const minS = Math.min(...S_values);
-    const maxS = Math.max(...S_values);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
+         // Find min and max values for scaling
+     const validPrices = prices.filter(p => !isNaN(p) && isFinite(p));
+     if (validPrices.length === 0) return;
+     
+     const minS = Math.min(...S_values);
+     const maxS = Math.max(...S_values);
+     const minPrice = Math.min(...validPrices);
+     const maxPrice = Math.max(...validPrices);
 
     // Draw grid
-    ctx.strokeStyle = '#333333';
+    ctx.strokeStyle = '#374151';
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
     
@@ -66,42 +129,47 @@ export default function PriceCurve({ data, loading, optionType, error }: PriceCu
     }
     ctx.setLineDash([]);
 
+    // Draw strike line
+    const strikeX = ((K - minS) / (maxS - minS)) * width;
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(strikeX, 0);
+    ctx.lineTo(strikeX, height);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     // Draw price curve
-    ctx.strokeStyle = '#00ff00';
+    ctx.strokeStyle = optionType === 'call' ? '#3b82f6' : '#ef4444';
     ctx.lineWidth = 2;
     ctx.beginPath();
     
-    for (let i = 0; i < S_values.length; i++) {
-      const x = ((S_values[i] - minS) / (maxS - minS)) * width;
-      const y = height - ((prices[i] - minPrice) / (maxPrice - minPrice)) * height;
-      
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    }
+         for (let i = 0; i < S_values.length; i++) {
+       const price = prices[i];
+       if (isNaN(price) || !isFinite(price)) continue;
+       
+       const x = ((S_values[i] - minS) / (maxS - minS)) * width;
+       const y = height - ((price - minPrice) / (maxPrice - minPrice)) * height;
+       
+       if (i === 0) {
+         ctx.moveTo(x, y);
+       } else {
+         ctx.lineTo(x, y);
+       }
+     }
     ctx.stroke();
 
-    // Draw data points
-    ctx.fillStyle = '#00ff00';
-    for (let i = 0; i < S_values.length; i += Math.ceil(S_values.length / 20)) {
-      const x = ((S_values[i] - minS) / (maxS - minS)) * width;
-      const y = height - ((prices[i] - minPrice) / (maxPrice - minPrice)) * height;
-      ctx.beginPath();
-      ctx.arc(x, y, 3, 0, 2 * Math.PI);
-      ctx.fill();
-    }
-
     // Draw axes labels
-    ctx.fillStyle = '#666666';
-    ctx.font = '10px monospace';
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '12px monospace';
     
     // X-axis labels
     for (let i = 0; i <= 5; i++) {
       const x = (width * i) / 5;
       const value = minS + (maxS - minS) * (i / 5);
-      ctx.fillText(`$${value.toFixed(0)}`, x, height - 5);
+      const label = value >= 1000 ? `$${(value / 1000).toFixed(0)}k` : `$${value.toFixed(0)}`;
+      ctx.fillText(label, x - 20, height - 5);
     }
     
     // Y-axis labels
@@ -111,15 +179,29 @@ export default function PriceCurve({ data, loading, optionType, error }: PriceCu
       ctx.fillText(`$${value.toFixed(2)}`, 5, y + 10);
     }
 
-  }, [data]);
+    // Draw axis titles
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '14px monospace';
+    ctx.fillText('Stock Price (S)', width / 2 - 50, height - 10);
+    
+    ctx.save();
+    ctx.translate(20, height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Option Price', 0, 0);
+    ctx.restore();
+
+  }, [data, optionType, K]);
 
   return (
     <Card className="bg-black border-gray-600 border-2 h-[400px]">
       <CardHeader className="pb-3">
         <CardTitle className="text-green-400 flex items-center gap-2 font-mono text-sm tracking-wide">
           <TrendingUp className="w-5 h-5" />
-          PRICE CURVE - {optionType.toUpperCase()} OPTION
+          {optionType.toUpperCase()} OPTION PRICE CURVE
         </CardTitle>
+        <div className="text-gray-400 text-xs font-mono">
+          K=${K.toFixed(2)}, r={(r * 100).toFixed(1)}%, σ={(sigma * 100).toFixed(1)}%, T={T.toFixed(2)}y
+        </div>
       </CardHeader>
       <CardContent className="h-[320px]">
         {error && (

@@ -8,7 +8,8 @@ import IVCard from './components/IVCard';
 import GreeksTable from './components/GreeksTable';
 import PriceCurve from './components/Charts/PriceCurve';
 import Heatmap from './components/Charts/Heatmap';
-import { api, PriceResponse, GreeksResponse, IVResponse, CurveResponse, HeatmapResponse } from './api-client';
+import GreeksPanel from './components/Charts/GreeksPanel';
+import { api, PriceResponse, GreeksResponse, IVResponse } from './api-client';
 
 interface CalculationErrors {
   price?: string;
@@ -16,6 +17,7 @@ interface CalculationErrors {
   iv?: string;
   curve?: string;
   heatmap?: string;
+  greeksCurves?: string;
 }
 
 export default function Home() {
@@ -23,8 +25,6 @@ export default function Home() {
   const [price, setPrice] = useState<number | null>(null);
   const [greeks, setGreeks] = useState<GreeksResponse | null>(null);
   const [ivData, setIvData] = useState<IVResponse | null>(null);
-  const [curveData, setCurveData] = useState<CurveResponse | null>(null);
-  const [heatmapData, setHeatmapData] = useState<HeatmapResponse | null>(null);
   const [currentParams, setCurrentParams] = useState<any>(null);
   const [errors, setErrors] = useState<CalculationErrors>({});
 
@@ -37,8 +37,6 @@ export default function Home() {
     setPrice(null);
     setGreeks(null);
     setIvData(null);
-    setCurveData(null);
-    setHeatmapData(null);
 
     const newErrors: CalculationErrors = {};
 
@@ -56,7 +54,7 @@ export default function Home() {
         setPrice(priceResult.price);
       } catch (error: any) {
         const errorMsg = error.response?.data?.detail || error.message || 'Price calculation failed';
-        newErrors.price = errorMsg;
+        newErrors.price = typeof errorMsg === 'string' ? errorMsg : 'Price calculation failed';
         console.error('Price calculation error:', error);
       }
 
@@ -73,7 +71,7 @@ export default function Home() {
         setGreeks(greeksResult);
       } catch (error: any) {
         const errorMsg = error.response?.data?.detail || error.message || 'Greeks calculation failed';
-        newErrors.greeks = errorMsg;
+        newErrors.greeks = typeof errorMsg === 'string' ? errorMsg : 'Greeks calculation failed';
         console.error('Greeks calculation error:', error);
       }
 
@@ -90,51 +88,14 @@ export default function Home() {
         setIvData(ivResult);
       } catch (error: any) {
         const errorMsg = error.response?.data?.detail || error.message || 'IV calculation failed';
-        newErrors.iv = errorMsg;
+        newErrors.iv = typeof errorMsg === 'string' ? errorMsg : 'IV calculation failed';
         console.error('IV calculation error:', error);
-      }
-
-      // Generate price curve
-      try {
-        const S_range = Array.from({ length: 50 }, (_, i) => params.S * (0.5 + i * 0.03));
-        const curveResult = await api.postCurve({
-          S_values: S_range,
-          K: params.K,
-          r: params.r,
-          sigma: params.sigma,
-          T: params.T,
-          option_type: params.option_type,
-        });
-        setCurveData(curveResult);
-      } catch (error: any) {
-        const errorMsg = error.response?.data?.detail || error.message || 'Curve generation failed';
-        newErrors.curve = errorMsg;
-        console.error('Curve generation error:', error);
-      }
-
-      // Generate heatmap
-      try {
-        const vol_range = Array.from({ length: 20 }, (_, i) => 0.1 + i * 0.02);
-        const S_heatmap = Array.from({ length: 20 }, (_, i) => params.S * (0.7 + i * 0.03));
-        const heatmapResult = await api.postHeatmap({
-          S_values: S_heatmap,
-          vol_values: vol_range,
-          K: params.K,
-          r: params.r,
-          T: params.T,
-          option_type: params.option_type,
-        });
-        setHeatmapData(heatmapResult);
-      } catch (error: any) {
-        const errorMsg = error.response?.data?.detail || error.message || 'Heatmap generation failed';
-        newErrors.heatmap = errorMsg;
-        console.error('Heatmap generation error:', error);
       }
 
       setErrors(newErrors);
 
       // Show success/error messages
-      const successCount = [price, greeks, ivData, curveData, heatmapData].filter(Boolean).length;
+      const successCount = [price, greeks, ivData].filter(Boolean).length;
       const errorCount = Object.keys(newErrors).length;
       
       if (errorCount === 0) {
@@ -147,7 +108,8 @@ export default function Home() {
 
     } catch (error: any) {
       console.error('General calculation error:', error);
-      toast.error(`Calculation failed: ${error.response?.data?.detail || error.message}`);
+      const errorMsg = error.response?.data?.detail || error.message || 'Unknown error';
+      toast.error(`Calculation failed: ${typeof errorMsg === 'string' ? errorMsg : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -190,18 +152,30 @@ export default function Home() {
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <PriceCurve 
-                data={curveData} 
-                loading={loading}
                 optionType={currentParams?.option_type || 'call'}
+                K={currentParams?.K || 100}
+                r={currentParams?.r || 0.05}
+                sigma={currentParams?.sigma || 0.2}
+                T={currentParams?.T || 1.0}
                 error={errors.curve}
               />
               <Heatmap 
-                data={heatmapData} 
-                loading={loading}
                 optionType={currentParams?.option_type || 'call'}
+                K={currentParams?.K || 100}
+                r={currentParams?.r || 0.05}
+                T={currentParams?.T || 1.0}
                 error={errors.heatmap}
               />
             </div>
+
+            <GreeksPanel 
+              optionType={currentParams?.option_type || 'call'}
+              K={currentParams?.K || 100}
+              r={currentParams?.r || 0.05}
+              sigma={currentParams?.sigma || 0.2}
+              T={currentParams?.T || 1.0}
+              error={errors.greeksCurves}
+            />
           </div>
         </div>
       </div>
