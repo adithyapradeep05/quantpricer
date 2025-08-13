@@ -1,65 +1,34 @@
-# QuantPricer Backend
+# QuantPricer Backend (FREE Deployment)
 
-FastAPI backend for option pricing using Black-Scholes formulas.
+## Deployment Options (All Free!)
 
-## Features
+### Option 1: Render (Recommended - Completely Free)
+1. Create account at [render.com](https://render.com)
+2. Create a new Web Service
+3. Connect your GitHub repository
+4. Set source directory to `backend`
+5. Set build command: `pip install -r requirements.txt`
+6. Set start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+7. Deploy (no environment variables needed)
 
-- Option pricing using Black-Scholes model
-- Greeks calculation (Delta, Gamma, Vega, Theta, Rho)
-- Implied volatility calculation
-- Price curves and heatmaps
-- RESTful API with automatic documentation
+### Option 2: Railway (Free Tier)
+1. Create account at [railway.app](https://railway.app)
+2. Connect your GitHub repository
+3. Select the `backend` directory as the source
+4. Deploy (Railway will auto-detect Python)
 
-## Installation
+### Option 3: Heroku (Free Tier - Limited)
+1. Create account at [heroku.com](https://heroku.com)
+2. Install Heroku CLI
+3. Create app: `heroku create your-app-name`
+4. Deploy: `git push heroku main`
 
+### Environment Variables
+- `PORT`: Port number (auto-set by platform)
+- No database configuration needed (using SQLite)
+
+### Local Development
 ```bash
 pip install -r requirements.txt
-```
-
-## Development
-
-```bash
 uvicorn app.main:app --reload
 ```
-
-The API will be available at http://localhost:8000
-
-## API Documentation
-
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-## Endpoints
-
-- `POST /api/price` - Calculate option price
-- `POST /api/greeks` - Calculate option Greeks
-- `POST /api/implied-vol` - Calculate implied volatility
-- `POST /api/curve` - Generate price curve
-- `POST /api/heatmap` - Generate price heatmap
-- `GET /healthz` - Health check
-
-## Deployment
-
-### Render
-
-1. Connect your repository to Render
-2. Set build command: `pip install -r requirements.txt`
-3. Set start command: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
-4. Set environment variable: `PORT=8000`
-
-### Railway
-
-1. Connect your repository to Railway
-2. Railway will automatically detect the Python app
-3. Set environment variable: `PORT=8000`
-
-### Docker
-
-```bash
-docker build -t quantpricer-backend .
-docker run -p 8000:8000 quantpricer-backend
-```
-
-## CORS Configuration
-
-The API is configured to allow CORS from all origins for development. For production, update the `allow_origins` in `app/main.py` to include only your frontend domain.
