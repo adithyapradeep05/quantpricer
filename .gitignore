@@ -1,15 +1,55 @@
-# .gitignore
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 *.sqlite3
+*.db
 .env
 .venv/
 venv/
 .envrc
+.env.local
+.env.production
+
+# IDE
 .DS_Store
 .idea/
 .vscode/
-.quantpricer.db
+*.swp
+*.swo
+
+# Database
+*.db
+quantpricer.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Reports
 reports/*.png
+reports/*.pdf
+
+# Node.js (for frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+.next/
+out/
+build/
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# OS
+Thumbs.db

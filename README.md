@@ -70,6 +70,7 @@ A professional option pricing tool built with Next.js 14 and FastAPI, featuring 
 3. **Open your browser**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
 
 ## API Endpoints
 
@@ -101,6 +102,36 @@ quantpricer/
 - **Backend**: `uvicorn app.main:app --reload` (runs on port 8000)
 - **Build**: `npm run build` (frontend)
 - **Lint**: `npm run lint` (frontend)
+
+## Deployment
+
+### Frontend (Vercel)
+1. Connect your GitHub repository to Vercel
+2. Set root directory to `frontend`
+3. Add environment variable: `NEXT_PUBLIC_API_URL` = your backend URL
+4. Deploy
+
+### Backend (Render/Railway)
+1. Deploy to Render or Railway
+2. Set source directory to `backend`
+3. Build command: `pip install -r requirements.txt`
+4. Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+## Environment Variables
+
+### Frontend
+- `NEXT_PUBLIC_API_URL`: Backend API URL (e.g., `https://your-app.onrender.com`)
+
+### Backend
+- `PORT`: Port number (auto-set by platform)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
 ## License
 
