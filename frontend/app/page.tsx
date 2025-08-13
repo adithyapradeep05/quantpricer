@@ -10,6 +10,14 @@ import PriceCurve from './components/Charts/PriceCurve';
 import Heatmap from './components/Charts/Heatmap';
 import { api, PriceResponse, GreeksResponse, IVResponse, CurveResponse, HeatmapResponse } from './api-client';
 
+interface CalculationErrors {
+  price?: string;
+  greeks?: string;
+  iv?: string;
+  curve?: string;
+  heatmap?: string;
+}
+
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [price, setPrice] = useState<number | null>(null);
@@ -18,67 +26,127 @@ export default function Home() {
   const [curveData, setCurveData] = useState<CurveResponse | null>(null);
   const [heatmapData, setHeatmapData] = useState<HeatmapResponse | null>(null);
   const [currentParams, setCurrentParams] = useState<any>(null);
+  const [errors, setErrors] = useState<CalculationErrors>({});
 
   const handleCalculate = async (params: any) => {
     setLoading(true);
     setCurrentParams(params);
+    setErrors({});
+    
+    // Reset all data
+    setPrice(null);
+    setGreeks(null);
+    setIvData(null);
+    setCurveData(null);
+    setHeatmapData(null);
+
+    const newErrors: CalculationErrors = {};
+
     try {
-      const priceResult = await api.postPrice({
-        S: params.S,
-        K: params.K,
-        r: params.r,
-        T: params.T,
-        sigma: params.sigma,
-        option_type: params.option_type,
-      });
-      setPrice(priceResult.price);
+      // Calculate option price
+      try {
+        const priceResult = await api.postPrice({
+          S: params.S,
+          K: params.K,
+          r: params.r,
+          T: params.T,
+          sigma: params.sigma,
+          option_type: params.option_type,
+        });
+        setPrice(priceResult.price);
+      } catch (error: any) {
+        const errorMsg = error.response?.data?.detail || error.message || 'Price calculation failed';
+        newErrors.price = errorMsg;
+        console.error('Price calculation error:', error);
+      }
 
-      const greeksResult = await api.postGreeks({
-        S: params.S,
-        K: params.K,
-        r: params.r,
-        T: params.T,
-        sigma: params.sigma,
-        option_type: params.option_type,
-      });
-      setGreeks(greeksResult);
+      // Calculate Greeks
+      try {
+        const greeksResult = await api.postGreeks({
+          S: params.S,
+          K: params.K,
+          r: params.r,
+          T: params.T,
+          sigma: params.sigma,
+          option_type: params.option_type,
+        });
+        setGreeks(greeksResult);
+      } catch (error: any) {
+        const errorMsg = error.response?.data?.detail || error.message || 'Greeks calculation failed';
+        newErrors.greeks = errorMsg;
+        console.error('Greeks calculation error:', error);
+      }
 
-      const ivResult = await api.postIV({
-        market_price: params.market_price,
-        S: params.S,
-        K: params.K,
-        r: params.r,
-        T: params.T,
-        option_type: params.option_type,
-      });
-      setIvData(ivResult);
+      // Calculate implied volatility
+      try {
+        const ivResult = await api.postIV({
+          market_price: params.market_price,
+          S: params.S,
+          K: params.K,
+          r: params.r,
+          T: params.T,
+          option_type: params.option_type,
+        });
+        setIvData(ivResult);
+      } catch (error: any) {
+        const errorMsg = error.response?.data?.detail || error.message || 'IV calculation failed';
+        newErrors.iv = errorMsg;
+        console.error('IV calculation error:', error);
+      }
 
-      const S_range = Array.from({ length: 50 }, (_, i) => params.S * (0.5 + i * 0.03));
-      const curveResult = await api.postCurve({
-        S_values: S_range,
-        K: params.K,
-        r: params.r,
-        sigma: params.sigma,
-        T: params.T,
-        option_type: params.option_type,
-      });
-      setCurveData(curveResult);
+      // Generate price curve
+      try {
+        const S_range = Array.from({ length: 50 }, (_, i) => params.S * (0.5 + i * 0.03));
+        const curveResult = await api.postCurve({
+          S_values: S_range,
+          K: params.K,
+          r: params.r,
+          sigma: params.sigma,
+          T: params.T,
+          option_type: params.option_type,
+        });
+        setCurveData(curveResult);
+      } catch (error: any) {
+        const errorMsg = error.response?.data?.detail || error.message || 'Curve generation failed';
+        newErrors.curve = errorMsg;
+        console.error('Curve generation error:', error);
+      }
 
-      const vol_range = Array.from({ length: 20 }, (_, i) => 0.1 + i * 0.02);
-      const S_heatmap = Array.from({ length: 20 }, (_, i) => params.S * (0.7 + i * 0.03));
-      const heatmapResult = await api.postHeatmap({
-        S_values: S_heatmap,
-        vol_values: vol_range,
-        K: params.K,
-        r: params.r,
-        T: params.T,
-        option_type: params.option_type,
-      });
-      setHeatmapData(heatmapResult);
+      // Generate heatmap
+      try {
+        const vol_range = Array.from({ length: 20 }, (_, i) => 0.1 + i * 0.02);
+        const S_heatmap = Array.from({ length: 20 }, (_, i) => params.S * (0.7 + i * 0.03));
+        const heatmapResult = await api.postHeatmap({
+          S_values: S_heatmap,
+          vol_values: vol_range,
+          K: params.K,
+          r: params.r,
+          T: params.T,
+          option_type: params.option_type,
+        });
+        setHeatmapData(heatmapResult);
+      } catch (error: any) {
+        const errorMsg = error.response?.data?.detail || error.message || 'Heatmap generation failed';
+        newErrors.heatmap = errorMsg;
+        console.error('Heatmap generation error:', error);
+      }
 
-      toast.success('Calculations completed successfully');
+      setErrors(newErrors);
+
+      // Show success/error messages
+      const successCount = [price, greeks, ivData, curveData, heatmapData].filter(Boolean).length;
+      const errorCount = Object.keys(newErrors).length;
+      
+      if (errorCount === 0) {
+        toast.success('All calculations completed successfully');
+      } else if (successCount > 0) {
+        toast.success(`${successCount} calculations completed, ${errorCount} failed`);
+      } else {
+        toast.error('All calculations failed. Please check your inputs.');
+      }
+
     } catch (error: any) {
-      console.error('Calculation error:', error);
+      console.error('General calculation error:', error);
       toast.error(`Calculation failed: ${error.response?.data?.detail || error.message}`);
     } finally {
       setLoading(false);
@@ -107,27 +175,31 @@ export default function Home() {
               <PriceCard 
                 price={price} 
                 optionType={currentParams?.option_type || 'call'} 
-                loading={loading} 
+                loading={loading}
+                error={errors.price}
               />
               <IVCard 
                 impliedVol={ivData?.implied_vol || null}
                 pricedWithIV={ivData?.priced_with_iv || null}
                 loading={loading}
+                error={errors.iv}
               />
             </div>
 
-            <GreeksTable greeks={greeks} loading={loading} />
+            <GreeksTable greeks={greeks} loading={loading} error={errors.greeks} />
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <PriceCurve 
                 data={curveData} 
                 loading={loading}
                 optionType={currentParams?.option_type || 'call'}
+                error={errors.curve}
               />
               <Heatmap 
                 data={heatmapData} 
                 loading={loading}
                 optionType={currentParams?.option_type || 'call'}
+                error={errors.heatmap}
               />
             </div>
           </div>

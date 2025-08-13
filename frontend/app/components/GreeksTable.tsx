@@ -2,15 +2,17 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Activity } from 'lucide-react';
+import { Activity, AlertCircle } from 'lucide-react';
 import { GreeksResponse } from '../api-client';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface GreeksTableProps {
   greeks: GreeksResponse | null;
   loading: boolean;
+  error?: string;
 }
 
-export default function GreeksTable({ greeks, loading }: GreeksTableProps) {
+export default function GreeksTable({ greeks, loading, error }: GreeksTableProps) {
   const greeksData = [
     { name: 'DELTA', value: greeks?.delta, description: 'PRICE SENSITIVITY TO UNDERLYING' },
     { name: 'GAMMA', value: greeks?.gamma, description: 'DELTA SENSITIVITY TO UNDERLYING' },
@@ -33,6 +35,15 @@ export default function GreeksTable({ greeks, loading }: GreeksTableProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {error && (
+          <Alert className="bg-red-900/20 border-red-500 mb-4">
+            <AlertCircle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-red-400 text-xs font-mono">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -49,6 +60,8 @@ export default function GreeksTable({ greeks, loading }: GreeksTableProps) {
                   <TableCell className="text-green-400 font-mono">
                     {loading ? (
                       <div className="animate-pulse bg-gray-800 h-4 w-16 rounded"></div>
+                    ) : error ? (
+                      <span className="text-red-400 text-xs">ERROR</span>
                     ) : (
                       formatValue(greek.value)
                     )}

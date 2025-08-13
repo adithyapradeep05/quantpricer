@@ -1,15 +1,17 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface IVCardProps {
   impliedVol: number | null;
   pricedWithIV: number | null;
   loading: boolean;
+  error?: string;
 }
 
-export default function IVCard({ impliedVol, pricedWithIV, loading }: IVCardProps) {
+export default function IVCard({ impliedVol, pricedWithIV, loading, error }: IVCardProps) {
   const formatPercent = (value: number) => {
     return `${(value * 100).toFixed(2)}%`;
   };
@@ -30,11 +32,22 @@ export default function IVCard({ impliedVol, pricedWithIV, loading }: IVCardProp
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {error && (
+          <Alert className="bg-red-900/20 border-red-500">
+            <AlertCircle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-red-400 text-xs font-mono">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="text-center">
           <div className="text-gray-400 text-xs mb-2 font-mono tracking-wide">IMPLIED VOLATILITY</div>
           <div className="text-2xl font-bold text-yellow-400 font-mono">
             {loading ? (
               <div className="animate-pulse bg-gray-800 h-6 w-24 mx-auto rounded"></div>
+            ) : error ? (
+              <span className="text-red-400 text-lg">ERROR</span>
             ) : impliedVol !== null ? (
               `${impliedVol.toFixed(5)} (${formatPercent(impliedVol)})`
             ) : (
@@ -48,6 +61,8 @@ export default function IVCard({ impliedVol, pricedWithIV, loading }: IVCardProp
           <div className="text-xl font-semibold text-yellow-400 font-mono">
             {loading ? (
               <div className="animate-pulse bg-gray-800 h-6 w-20 mx-auto rounded"></div>
+            ) : error ? (
+              <span className="text-red-400">ERROR</span>
             ) : pricedWithIV !== null ? (
               `$${formatPrice(pricedWithIV)}`
             ) : (

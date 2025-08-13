@@ -2,16 +2,18 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEffect, useRef } from 'react';
-import { Zap } from 'lucide-react';
+import { Zap, AlertCircle } from 'lucide-react';
 import { HeatmapResponse } from '../../api-client';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface HeatmapProps {
   data: HeatmapResponse | null;
   loading: boolean;
   optionType: 'call' | 'put';
+  error?: string;
 }
 
-export default function Heatmap({ data, loading, optionType }: HeatmapProps) {
+export default function Heatmap({ data, loading, optionType, error }: HeatmapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -93,9 +95,25 @@ export default function Heatmap({ data, loading, optionType }: HeatmapProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="h-[320px]">
+        {error && (
+          <Alert className="bg-red-900/20 border-red-500 mb-4">
+            <AlertCircle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-red-400 text-xs font-mono">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-pulse bg-gray-800 h-64 w-full rounded"></div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-full text-red-400">
+            <div className="text-center">
+              <AlertCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p className="font-mono text-xs">HEATMAP GENERATION FAILED</p>
+            </div>
           </div>
         ) : data ? (
           <div className="relative h-full">

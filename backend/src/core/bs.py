@@ -174,5 +174,3 @@ def black_scholes_price(S: float, K: float, T: float, r: float, sigma: float, op
         return price_put(S, K, T, r, sigma)
     else:
         raise ValueError("option_type must be 'call' or 'put'")
-
-            
